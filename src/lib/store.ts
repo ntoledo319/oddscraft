@@ -6,7 +6,9 @@
 import fs from 'fs';
 import path from 'path';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = process.env.VERCEL
+  ? path.join('/tmp', 'oddscraft-data') // serverless FS is read-only except /tmp (ephemeral)
+  : path.join(process.cwd(), 'data');
 const LAUNCHES_FILE = path.join(DATA_DIR, 'launches.json');
 const META_DIR = path.join(DATA_DIR, 'metadata');
 const IMG_DIR = path.join(DATA_DIR, 'images');

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0d1d"/>
+      <stop offset="1" stop-color="#171033"/>
+    </linearGradient>
+    <linearGradient id="sol" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#9945FF"/>
+      <stop offset="1" stop-color="#14F195"/>
+    </linearGradient>
+    <linearGradient id="sol2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14F195"/>
+      <stop offset="1" stop-color="#9945FF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+  <!-- conviction-token coin: split probability ring (YES arc / NO arc) -->
+  <circle cx="512" cy="512" r="330" fill="none" stroke="url(#sol)" stroke-width="72"
+          stroke-dasharray="1458 1615" stroke-dashoffset="-404" stroke-linecap="round"/>
+  <circle cx="512" cy="512" r="330" fill="none" stroke="url(#sol2)" stroke-width="72"
+          stroke-dasharray="512 2561" stroke-dashoffset="-1978" stroke-linecap="round" opacity="0.9"/>
+  <!-- launch arrow through the coin: the market becoming a token -->
+  <g stroke="#f5f3ff" stroke-width="64" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M 386 638 L 638 386"/>
+    <path d="M 470 386 L 638 386 L 638 554"/>
+  </g>
+  <circle cx="512" cy="512" r="330" fill="none" stroke="#f5f3ff" stroke-width="6" opacity="0.12"/>
+</svg>

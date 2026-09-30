@@ -12,10 +12,6 @@ import { defaultImageSvg } from '@/pages/api/launch/prepare';
 const RPC_URL = process.env.RPC_URL as string;
 const POOL_CONFIG_KEY = process.env.POOL_CONFIG_KEY as string;
 
-if (!RPC_URL || !POOL_CONFIG_KEY) {
-  throw new Error('Missing required environment variables (RPC_URL, POOL_CONFIG_KEY)');
-}
-
 type UploadRequest = {
   tokenLogo?: string; // data URI (optional — default SVG generated)
   tokenName: string;
@@ -27,6 +23,11 @@ type UploadRequest = {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+  if (!RPC_URL || !POOL_CONFIG_KEY) {
+    return res
+      .status(500)
+      .json({ error: 'Server missing RPC_URL / POOL_CONFIG_KEY (set them in env)' });
   }
 
   try {
