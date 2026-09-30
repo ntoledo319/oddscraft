@@ -9,9 +9,12 @@ market (via the [Panta API](https://docs.panta.market/)) **and** a companion
 graduates to DAMM v2 — plus a live Solana mainnet terminal (Solami) streaming
 launch/trade data.
 
-Built for the Colosseum **Crypto World's Fair** hackathon (Sep 14 – Oct 12, 2026):
-Meteora DBC side track, Panta API side track, Solami side track, and the main
-Solana track. Forked from
+Built for the Colosseum **Crypto World's Fair** hackathon (Sep 14 – Oct 12, 2026)
+— main competition, Solana track.
+
+**Live demo: https://oddscraft.vercel.app** (Panta sandbox data via pk_test key;
+DBC side pointed at devnet RPC — pool creation activates when the devnet config
+lands, see `docs/`). Forked from
 [`meteora-invent/scaffolds/fun-launch`](https://github.com/MeteoraAg/meteora-invent)
 with Panta integration patterns from
 [`panta-api-playground`](https://github.com/Kaito-HQ/panta-api-playground).
@@ -104,9 +107,11 @@ mapping.
   design. Switching to a `pk_live_` key makes the same flow live (mainnet, real
   USDC).
 - Token metadata/images are served by the app itself and stored under `data/`
-  (gitignored) — fine for a demo; swap in permanent storage (e.g. Irys/Arweave)
-  for production.
-- Solami live-terminal tab (`/terminal`) lands in a later milestone.
+  locally (gitignored) or `/tmp` on Vercel (ephemeral) — fine for a demo; swap in
+  permanent storage (e.g. Irys/Arweave) for production.
+- The deployed demo uses devnet RPC for the DBC side (reads are free); the
+  `POOL_CONFIG_KEY` env must point at a config created on that cluster —
+  presets in `docs/conviction-curve*.dbc_config.jsonc`.
 
 ## License
 
