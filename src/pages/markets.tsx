@@ -22,6 +22,7 @@ import type {
   MarketCatalogItem,
   PrimaryBuildResponse,
   PrimaryQuoteResponse,
+  PositionRow,
 } from '@/lib/panta';
 import type { LaunchRecord } from '@/lib/store';
 
@@ -37,6 +38,11 @@ function fmtPrice(p?: string | null) {
   return Number.isFinite(n) ? n.toFixed(3) : p;
 }
 
+function isTradable(m: MarketCatalogItem): boolean {
+  const phase = (m.phase ?? m.status ?? '').toLowerCase();
+  return !m.resolved && phase === 'primary';
+}
+
 function BuyPanel({ market, wallet }: { market: MarketCatalogItem; wallet: string }) {
   const { publicKey, signTransaction } = useWallet();
   const [side, setSide] = useState<'yes' | 'no'>('yes');
@@ -46,13 +52,18 @@ function BuyPanel({ market, wallet }: { market: MarketCatalogItem; wallet: strin
 
   const buy = async () => {
     if (!publicKey || !signTransaction) return;
+    const amt = Number(amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setStatus('Enter an amount greater than 0 USDC');
+      return;
+    }
     setBusy(true);
     setStatus('');
     try {
       setStatus('Quoting…');
       const quote = await pantaProxy<PrimaryQuoteResponse>('/primaryorderquote/', {
         method: 'POST',
-        body: { wallet, marketId: market.marketId, side, amountUsdc: amount },
+        body: { wallet, marketId: market.marketId, side, amountUsdc: amt.toFixed(2) },
       });
       setStatus(`Building tx (≈${quote.shares} shares, fee ${quote.feeUsdc} USDC)…`);
       const build = await pantaProxy<PrimaryBuildResponse>('/primaryorderbuild/', {
@@ -73,8 +84,18 @@ function BuyPanel({ market, wallet }: { market: MarketCatalogItem; wallet: strin
         method: 'POST',
         body: { orderId: build.orderId, signature: sig, wallet },
       });
-      setStatus(`Filled. Sig: ${sig.slice(0, 20)}…`);
-      toast.success(`${side.toUpperCase()} buy submitted`);
+      let finalStatus = 'submitted';
+      try {
+        const verify = (await pantaProxy('/primaryorderverify/', {
+          method: 'POST',
+          body: { orderId: build.orderId, signature: sig, wallet },
+        })) as { status?: string };
+        if (verify?.status) finalStatus = verify.status;
+      } catch {
+        /* verify is best-effort */
+      }
+      setStatus(`Order ${finalStatus}. Sig: ${sig.slice(0, 20)}…`);
+      toast.success(`${side.toUpperCase()} buy ${finalStatus}`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Buy failed';
       setStatus(`Error: ${msg}`);
@@ -107,6 +128,44 @@ function BuyPanel({ market, wallet }: { market: MarketCatalogItem; wallet: strin
         </Button>
       </div>
       {status && <p className="text-xs text-neutral-400 break-all">{status}</p>}
+    </div>
+  );
+}
+
+function PositionsTable({ data }: { data: unknown }) {
+  const rows: PositionRow[] = useMemo(() => {
+    if (!data || typeof data !== 'object') return [];
+    const d = data as { items?: PositionRow[]; positions?: PositionRow[] };
+    return d.items ?? d.positions ?? [];
+  }, [data]);
+
+  if (rows.length === 0) {
+    return <p className="text-sm text-neutral-500">No positions returned for this wallet.</p>;
+  }
+  return (
+    <div className="overflow-x-auto rounded-xl border border-neutral-850">
+      <table className="w-full text-sm">
+        <thead className="bg-neutral-900 text-left text-xs text-neutral-500">
+          <tr>
+            <th className="px-3 py-2">Market</th>
+            <th className="px-3 py-2">Side</th>
+            <th className="px-3 py-2">Shares</th>
+            <th className="px-3 py-2">Phase</th>
+            <th className="px-3 py-2">Claimable</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={i} className="border-t border-neutral-850">
+              <td className="px-3 py-2 max-w-64 truncate">{r.title ?? r.marketId}</td>
+              <td className="px-3 py-2">{r.side ?? '—'}</td>
+              <td className="px-3 py-2">{r.shares ?? '—'}</td>
+              <td className="px-3 py-2">{r.phase ?? '—'}</td>
+              <td className="px-3 py-2">{r.claimable ? 'yes' : 'no'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -146,19 +205,15 @@ export default function MarketsPage() {
     void load();
   }, [load]);
 
-  const loadPositions = useCallback(async () => {
-    if (!wallet) return;
-    try {
-      const p = await pantaProxy<unknown>('/positions/', { query: { wallet } });
-      setPositions(p);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Positions failed');
-    }
-  }, [wallet]);
-
   useEffect(() => {
-    void loadPositions();
-  }, [loadPositions]);
+    if (!wallet) {
+      setPositions(null);
+      return;
+    }
+    pantaProxy<unknown>('/positions/', { query: { wallet } })
+      .then(setPositions)
+      .catch((e) => toast.error(e instanceof Error ? e.message : 'Positions failed'));
+  }, [wallet]);
 
   const launchByMarket = useMemo(() => {
     const map = new Map<string, LaunchRecord>();
@@ -193,8 +248,11 @@ export default function MarketsPage() {
             </div>
           )}
           {error && (
-            <div className="mb-6 rounded-lg border border-rose/40 bg-rose/10 p-3 text-sm text-rose">
-              {error}
+            <div className="mb-6 flex items-center justify-between rounded-lg border border-rose/40 bg-rose/10 p-3 text-sm text-rose">
+              <span>{error}</span>
+              <Button variant="secondary" onClick={() => void load()}>
+                Retry
+              </Button>
             </div>
           )}
 
@@ -263,45 +321,73 @@ export default function MarketsPage() {
           <section>
             <h2 className="text-lg font-semibold mb-3">Panta catalog</h2>
             {loading ? (
-              <p className="text-neutral-500 text-sm">Loading…</p>
-            ) : markets.length === 0 ? (
-              <p className="text-neutral-500 text-sm">No markets returned.</p>
+              <div className="grid gap-3">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-24 animate-pulse rounded-xl border border-neutral-850 bg-neutral-900/60"
+                  />
+                ))}
+              </div>
+            ) : markets.length === 0 && !error ? (
+              <div className="rounded-xl border border-neutral-850 bg-neutral-925 p-6 text-sm text-neutral-400">
+                No markets in the catalog right now.
+                {disclaimer
+                  ? ' Test keys serve a limited sandbox catalog — launch one from the Launch page.'
+                  : ' Be the first to launch one from the Launch page.'}
+              </div>
             ) : (
               <div className="grid gap-3">
                 {markets.map((m) => {
                   const paired = launchByMarket.get(m.marketId);
+                  const tradable = isTradable(m);
                   return (
                     <div
                       key={m.marketId}
                       className="rounded-xl border border-neutral-850 bg-neutral-925 p-4"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-medium">{m.title}</p>
-                          <p className="text-xs text-neutral-500 mt-0.5">
-                            {m.category} · {m.phase} · vol {m.volumeUsdc ?? '0'} USDC
-                            {paired && (
-                              <>
-                                {' · '}
-                                <span className="text-primary">
-                                  conviction token {paired.tokenSymbol}
-                                </span>
-                              </>
-                            )}
-                          </p>
+                        <div className="flex min-w-0 items-start gap-3">
+                          {m.images?.[0] && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={m.images[0]}
+                              alt=""
+                              className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium">{m.title}</p>
+                            <p className="text-xs text-neutral-500 mt-0.5">
+                              {m.category} · {m.phase}
+                              {m.resolved ? ' · resolved' : ''} · vol {m.volumeUsdc ?? '0'} USDC
+                              {paired && (
+                                <>
+                                  {' · '}
+                                  <span className="text-primary">
+                                    conviction token {paired.tokenSymbol}
+                                  </span>
+                                </>
+                              )}
+                            </p>
+                          </div>
                         </div>
                         <div className="flex items-center gap-3 text-sm">
                           <span className="text-emerald">YES {fmtPrice(m.primaryYesPrice ?? m.yesPrice)}</span>
                           <span className="text-rose">NO {fmtPrice(m.primaryNoPrice ?? m.noPrice)}</span>
                           {wallet ? (
-                            <Button
-                              variant="secondary"
-                              onClick={() =>
-                                setOpenBuy(openBuy === m.marketId ? null : m.marketId)
-                              }
-                            >
-                              Trade
-                            </Button>
+                            tradable ? (
+                              <Button
+                                variant="secondary"
+                                onClick={() =>
+                                  setOpenBuy(openBuy === m.marketId ? null : m.marketId)
+                                }
+                              >
+                                Trade
+                              </Button>
+                            ) : (
+                              <span className="text-xs text-neutral-500">not trading</span>
+                            )
                           ) : (
                             <Button variant="secondary" onClick={() => setShowModal(true)}>
                               Connect to trade
@@ -309,7 +395,7 @@ export default function MarketsPage() {
                           )}
                         </div>
                       </div>
-                      {openBuy === m.marketId && wallet && (
+                      {openBuy === m.marketId && wallet && tradable && (
                         <BuyPanel market={m} wallet={wallet} />
                       )}
                     </div>
@@ -319,12 +405,14 @@ export default function MarketsPage() {
             )}
           </section>
 
-          {wallet && positions != null && (
+          {wallet && (
             <section className="mt-10">
               <h2 className="text-lg font-semibold mb-3">Your positions</h2>
-              <pre className="rounded-xl border border-neutral-850 bg-neutral-925 p-4 text-xs overflow-auto max-h-80">
-                {JSON.stringify(positions, null, 2)}
-              </pre>
+              {positions == null ? (
+                <div className="h-16 animate-pulse rounded-xl border border-neutral-850 bg-neutral-900/60" />
+              ) : (
+                <PositionsTable data={positions} />
+              )}
             </section>
           )}
         </main>

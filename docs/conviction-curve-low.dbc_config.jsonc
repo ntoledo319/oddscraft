@@ -1,0 +1,97 @@
+{
+  /* OddsCraft DBC config — LOW-THRESHOLD variant of the conviction-curve preset.
+   * Same curve shape and fee design as conviction-curve.dbc_config.jsonc, with
+   * all custom sqrt prices scaled ×0.1656 → migration threshold ≈ 1.0 SOL
+   * (measured 999,034,623 lamports on localnet 2026-09-30).
+   * Purpose: graduation demos (DBC → DAMM v2) feasible on faucet-drip devnet SOL.
+   * Empirical note: threshold scales ~linearly with the uniform price factor.
+   * Localnet-verified config: 4CKTCnw599q9bVY2focDteB7dghDwnuLnMQBCkygXXbY */
+  "rpcUrl": "https://api.devnet.solana.com", // localnet: http://localhost:8899
+  "dryRun": true,  // set false only after review
+  "keypairFilePath": "./keypair.json",
+  "computeUnitPriceMicroLamports": 100000,
+  "quoteMint": "So11111111111111111111111111111111111111112",
+
+  "dbcConfig": {
+    "buildCurveMode": 5,
+
+    /* custom sqrt prices (SOL per token), ascending — long flat band + accelerating tail */
+    "prices": [0.00000000033, 0.00000000049, 0.00000000073, 0.00000000114, 0.00000000199, 0.00000000415, 0.00000000993],
+    "liquidityWeights": [10, 10, 8, 6, 4, 2],
+
+    "token": {
+      "totalTokenSupply": 1000000000,
+      "tokenBaseDecimal": 6,
+      "tokenQuoteDecimal": 9,
+      "tokenType": 0,
+      "tokenAuthorityOption": 1,
+      "leftover": 1000000
+    },
+
+    "fee": {
+      "baseFeeParams": {
+        "baseFeeMode": 0,
+        "feeSchedulerParam": {
+          "startingFeeBps": 250,
+          "endingFeeBps": 50,
+          "numberOfPeriod": 60,
+          "totalDuration": 3600
+        }
+      },
+      "dynamicFeeEnabled": true,
+      "collectFeeMode": 0,
+      "creatorTradingFeePercentage": 50,
+      "poolCreationFee": 0,
+      "enableFirstSwapWithMinFee": false
+    },
+
+    "migration": {
+      "migrationOption": 1,
+      "migrationFeeOption": 3,
+      "migrationFee": {
+        "feePercentage": 0,
+        "creatorFeePercentage": 0
+      }
+    },
+
+    "liquidityDistribution": {
+      "partnerLiquidityPercentage": 50,
+      "creatorLiquidityPercentage": 40,
+      "partnerPermanentLockedLiquidityPercentage": 5,
+      "creatorPermanentLockedLiquidityPercentage": 5
+    },
+
+    "lockedVesting": {
+      "totalLockedVestingAmount": 0,
+      "numberOfVestingPeriod": 0,
+      "cliffUnlockAmount": 0,
+      "totalVestingDuration": 0,
+      "cliffDurationFromMigrationTime": 0
+    },
+
+    "activationType": 1,
+
+    "leftoverReceiver": "EghUi7uQqY2jAXq7Be8cCGVDnHWKsAcX72RGnjZsPnm2",
+    "feeClaimer": "EghUi7uQqY2jAXq7Be8cCGVDnHWKsAcX72RGnjZsPnm2"
+  },
+
+  "dbcPool": {
+    "creator": "EghUi7uQqY2jAXq7Be8cCGVDnHWKsAcX72RGnjZsPnm2",
+    "name": "SOL>300 Oct12 Conviction",
+    "symbol": "SOLYES300",
+    "metadata": {
+      "uri": "https://oddscraft.xyz/meta/solyes300.json",
+      "description": "Conviction token paired with the OddsCraft prediction market: Will SOL trade above $300 on Oct 12, 2026?",
+      "website": "https://oddscraft.xyz",
+      "twitter": "https://x.com/oddscraft",
+      "telegram": ""
+    }
+  },
+
+  "dbcSwap": {
+    "amountIn": 0.5,
+    "slippageBps": 100,
+    "swapBaseForQuote": false,
+    "referralTokenAccount": null
+  }
+}

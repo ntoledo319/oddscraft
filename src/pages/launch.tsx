@@ -86,6 +86,9 @@ export default function LaunchPage() {
       if (!question.trim() || !resolutionRule.trim() || !tokenName.trim() || !tokenSymbol.trim()) {
         throw new Error('Fill in question, resolution rule, token name and symbol');
       }
+      if (!Number.isFinite(days) || days < 1 || days > 90) {
+        throw new Error('Market duration must be between 1 and 90 days');
+      }
       const now = Math.floor(Date.now() / 1000);
       const startTime = now + 3600; // Panta requires start ≥ ~1h ahead
       const endTime = startTime + days * 24 * 3600;
@@ -174,8 +177,16 @@ export default function LaunchPage() {
         setResult({ ...partial, register: fin.register, marketId: fin.register.marketId, poolAddress: fin.poolAddress });
         toast.success('Prediction market registered with Panta');
       } catch (e) {
-        // DBC side already landed — report Panta failure without losing the pair.
+        // DBC side already landed — record the pool, report Panta failure without losing the pair.
         const msg = e instanceof Error ? e.message : 'Panta step failed';
+        try {
+          await apiFetch('/api/launch/finalize', {
+            method: 'POST',
+            body: { createId: prep.createId, mint, wallet, poolTxSignature: sendRes.signature },
+          });
+        } catch {
+          /* best-effort record */
+        }
         partial.pantaError = msg;
         setResult({ ...partial });
         setError(`Pool launched, but the Panta market step failed: ${msg}`);

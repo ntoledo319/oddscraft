@@ -16,13 +16,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { createId, signature, mint, wallet, poolTxSignature } = req.body ?? {};
-  if (!createId || !signature || !mint || !wallet) {
-    return res.status(400).json({ error: 'Missing createId/signature/mint/wallet' });
+  if (!createId || !mint || !wallet) {
+    return res.status(400).json({ error: 'Missing createId/mint/wallet' });
   }
 
   const rec = getLaunch(mint);
   if (rec && poolTxSignature) {
     saveLaunch({ ...rec, poolTxSignature, status: 'pool_created' });
+  }
+
+  // Pool-only record (Panta step failed or skipped client-side): nothing to register.
+  if (!signature) {
+    return res.status(200).json({ recorded: true, status: 'pool_created' });
   }
 
   try {
