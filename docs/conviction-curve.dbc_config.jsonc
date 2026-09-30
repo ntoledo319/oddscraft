@@ -1,0 +1,97 @@
+{
+  /* OddsCraft DBC config — "conviction curve" preset for prediction-market companion tokens.
+   * Long/flat custom curve: most of the supply trades in a low, slow-rising price band
+   * (thin event-driven assets stay tradeable), with an accelerating tail into graduation.
+   * Localnet first; flip rpcUrl to https://api.devnet.solana.com for the devnet demo. */
+  "rpcUrl": "http://localhost:8899",
+  "dryRun": true,  // set false only after review
+  "keypairFilePath": "./keypair.json",
+  "computeUnitPriceMicroLamports": 100000,
+  "quoteMint": "So11111111111111111111111111111111111111112",
+
+  "dbcConfig": {
+    "buildCurveMode": 5,
+
+    /* buildCurveWithCustomSqrtPrices — ascending decimal prices (SOL per token).
+     * 7 points: long flat band 2e-9 → 7e-9 across ~85% of curve liquidity, tail to 6e-8. */
+    "prices": [0.000000002, 0.000000003, 0.0000000045, 0.000000007, 0.000000012, 0.000000025, 0.00000006],
+    "liquidityWeights": [10, 10, 8, 6, 4, 2],
+
+    "token": {
+      "totalTokenSupply": 1000000000,
+      "tokenBaseDecimal": 6,
+      "tokenQuoteDecimal": 9,
+      "tokenType": 0,
+      "tokenAuthorityOption": 1,
+      "leftover": 1000000
+    },
+
+    /* Novel fee config: anti-snipe decay — 2.5% at launch decaying linearly to 0.5%
+     * over 1 hour; thin assets need cheap steady-state trading. */
+    "fee": {
+      "baseFeeParams": {
+        "baseFeeMode": 0,
+        "feeSchedulerParam": {
+          "startingFeeBps": 250,
+          "endingFeeBps": 50,
+          "numberOfPeriod": 60,
+          "totalDuration": 3600
+        }
+      },
+      "dynamicFeeEnabled": true,
+      "collectFeeMode": 0,
+      "creatorTradingFeePercentage": 50,
+      "poolCreationFee": 0,
+      "enableFirstSwapWithMinFee": false
+    },
+
+    "migration": {
+      "migrationOption": 1,
+      "migrationFeeOption": 3,
+      "migrationFee": {
+        "feePercentage": 0,
+        "creatorFeePercentage": 0
+      }
+    },
+
+    "liquidityDistribution": {
+      "partnerLiquidityPercentage": 50,
+      "creatorLiquidityPercentage": 40,
+      "partnerPermanentLockedLiquidityPercentage": 5,
+      "creatorPermanentLockedLiquidityPercentage": 5
+    },
+
+    "lockedVesting": {
+      "totalLockedVestingAmount": 0,
+      "numberOfVestingPeriod": 0,
+      "cliffUnlockAmount": 0,
+      "totalVestingDuration": 0,
+      "cliffDurationFromMigrationTime": 0
+    },
+
+    "activationType": 1,
+
+    "leftoverReceiver": "EghUi7uQqY2jAXq7Be8cCGVDnHWKsAcX72RGnjZsPnm2",
+    "feeClaimer": "EghUi7uQqY2jAXq7Be8cCGVDnHWKsAcX72RGnjZsPnm2"
+  },
+
+  "dbcPool": {
+    "creator": "EghUi7uQqY2jAXq7Be8cCGVDnHWKsAcX72RGnjZsPnm2",
+    "name": "SOL>300 Oct12 Conviction",
+    "symbol": "SOLYES300",
+    "metadata": {
+      "uri": "https://oddscraft.xyz/meta/solyes300.json",
+      "description": "Conviction token paired with the OddsCraft prediction market: Will SOL trade above $300 on Oct 12, 2026?",
+      "website": "https://oddscraft.xyz",
+      "twitter": "https://x.com/oddscraft",
+      "telegram": ""
+    }
+  },
+
+  "dbcSwap": {
+    "amountIn": 1.0,
+    "slippageBps": 100,
+    "swapBaseForQuote": false,
+    "referralTokenAccount": null
+  }
+}

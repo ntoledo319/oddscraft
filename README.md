@@ -78,8 +78,9 @@ pnpm dev                  # http://localhost:3000
 git clone https://github.com/MeteoraAg/meteora-invent && cd meteora-invent && pnpm install
 # generate keypair (needs PRIVATE_KEY in studio/.env), airdrop 5 devnet SOL:
 pnpm studio generate-keypair --network devnet --airdrop
-# edit studio/config/dbc_config.jsonc (the OddsCraft preset lives in
-# ../config or copy the curve params from this repo's docs), then:
+# edit studio/config/dbc_config.jsonc — the OddsCraft "conviction curve" preset
+# (custom long/flat sqrt-price curve + anti-snipe fee decay) is in this repo at
+# docs/conviction-curve.dbc_config.jsonc — copy it over, set rpcUrl/dryRun, then:
 pnpm studio dbc-create-config        # prints the config pubkey → POOL_CONFIG_KEY
 ```
 
